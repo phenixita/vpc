@@ -97,6 +97,10 @@ export function AiScenario({
           After that, the app sets the suggested perceived value and automatically shows the three
           price tiers.
         </p>
+        <p className="warning-note">
+          <strong>⚠️ AI can make mistakes.</strong> Always review the suggested value, curve, and
+          price tiers before making decisions. Use your judgment and adjust as needed.
+        </p>
       </div>
 
       <div className="field">
