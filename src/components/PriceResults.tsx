@@ -12,7 +12,7 @@ export function PriceResults({ curve, title, tiers, emptyMessage }: PriceResults
     <section className="results" aria-live="polite">
       <div className="results-header">
         <h3>{title}</h3>
-        {curve ? <span className="curve-pill">{curve.name}</span> : null}
+        {curve ? <span className="curve-pill">{curve.tierTag}</span> : null}
       </div>
 
       {tiers.length > 0 ? (

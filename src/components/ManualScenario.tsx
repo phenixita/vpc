@@ -1,13 +1,11 @@
 import type { CurveId } from '../openrouter'
-import type { CurrencyCode, CurveConfig, PriceTier } from '../pricing'
+import type { CurveConfig, PriceTier } from '../pricing'
 import { PriceResults } from './PriceResults'
 import { ValueFields } from './ValueFields'
 
 type ManualScenarioProps = {
   manualProjectValue: string
   onManualProjectValueChange: (value: string) => void
-  manualCurrency: CurrencyCode
-  onManualCurrencyChange: (currency: CurrencyCode) => void
   showManualValueError: boolean
   manualCurveId: CurveId | ''
   onManualCurveChange: (curveId: CurveId | '') => void
@@ -19,8 +17,6 @@ type ManualScenarioProps = {
 export function ManualScenario({
   manualProjectValue,
   onManualProjectValueChange,
-  manualCurrency,
-  onManualCurrencyChange,
   showManualValueError,
   manualCurveId,
   onManualCurveChange,
@@ -35,8 +31,6 @@ export function ManualScenario({
           idPrefix="manual"
           projectValue={manualProjectValue}
           onProjectValueChange={onManualProjectValueChange}
-          currency={manualCurrency}
-          onCurrencyChange={onManualCurrencyChange}
           showValueError={showManualValueError}
         />
 

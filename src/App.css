@@ -81,6 +81,20 @@
   font-weight: 700;
 }
 
+.multi-checkbox-field {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  min-width: 0;
+}
+
+.multi-checkbox-field legend {
+  padding: 0 4px;
+  margin-left: -4px;
+  font-size: 0.96rem;
+  font-weight: 700;
+}
+
 .field input,
 .field select,
 .field textarea {
@@ -133,6 +147,31 @@
 .field-hint {
   margin: 0;
   padding: 0;
+}
+
+.field-hint-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.multi-checkbox-list {
+  display: grid;
+  gap: 8px;
+}
+
+.multi-checkbox-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-weight: 500;
+}
+
+.multi-checkbox-item input {
+  margin-top: 2px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
 }
 
 .field-hint p {

@@ -15,7 +15,6 @@ import {
   curves,
   formatPerceivedValueForInput,
   parseProjectValue,
-  type CurrencyCode,
 } from './pricing'
 import './App.css'
 
@@ -36,17 +35,32 @@ const aiWarningItems = [
   'No data is retained by this website.',
 ]
 
+const intangibleBenefitsOptions = [
+  'Reduced operational stress',
+  'Improved aesthetics/brand perception',
+  'Better team collaboration',
+  'More effective communication',
+  'Higher decision quality and consistency',
+]
+
+function keepDigitsOnly(value: string) {
+  return value.replace(/\D+/g, '')
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState<ScenarioTabId>('manual')
   const [manualProjectValue, setManualProjectValue] = useState('')
-  const [manualCurrency, setManualCurrency] = useState<CurrencyCode>('EUR')
   const [manualCurveId, setManualCurveId] = useState<CurveId | ''>('')
 
   const [aiProjectValue, setAiProjectValue] = useState('')
-  const [aiCurrency, setAiCurrency] = useState<CurrencyCode>('EUR')
   const [aiAnalysis, setAiAnalysis] = useState<CurveAnalysisResult | null>(null)
   const [projectBrief, setProjectBrief] = useState('')
   const [aiSystemPrompt, setAiSystemPrompt] = useState(defaultAiSystemPrompt)
+  const [companyRevenue, setCompanyRevenue] = useState('')
+  const [influencedPeople, setInfluencedPeople] = useState('')
+  const [expectedRevenueIncrease, setExpectedRevenueIncrease] = useState('')
+  const [expectedCostReduction, setExpectedCostReduction] = useState('')
+  const [intangibleBenefits, setIntangibleBenefits] = useState<string[]>([])
   const [hasSanitizedBrief, setHasSanitizedBrief] = useState(false)
   const [analysisError, setAnalysisError] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -57,8 +71,8 @@ function App() {
   )
   const aiParsedValue = useMemo(() => parseProjectValue(aiProjectValue), [aiProjectValue])
 
-  const manualFormatter = useMemo(() => createCurrencyFormatter(manualCurrency), [manualCurrency])
-  const aiFormatter = useMemo(() => createCurrencyFormatter(aiCurrency), [aiCurrency])
+  const manualFormatter = useMemo(() => createCurrencyFormatter('EUR'), [])
+  const aiFormatter = useMemo(() => createCurrencyFormatter('EUR'), [])
 
   const manualCurve = manualCurveId ? curveMap[manualCurveId] : null
   const aiCurve = aiAnalysis ? curveMap[aiAnalysis.curveId] : null
@@ -117,6 +131,11 @@ function App() {
         description: projectBrief.trim(),
         acknowledgedWarning: hasSanitizedBrief,
         systemPrompt: aiSystemPrompt,
+        companyRevenue,
+        influencedPeople,
+        expectedRevenueIncrease,
+        expectedCostReduction,
+        intangibleBenefits,
       })
 
       setAiAnalysis(result)
@@ -143,7 +162,7 @@ function App() {
 
   const aiEmptyMessage = aiCurve
     ? 'Enter the perceived value to calculate the 3 price tiers.'
-    : 'Write a prompt, confirm the warning, and ask AI to choose the curve.'
+    : 'Write a prompt, confirm the warning, and submit.'
 
   return (
     <div className="app">
@@ -174,8 +193,6 @@ function App() {
             <ManualScenario
               manualProjectValue={manualProjectValue}
               onManualProjectValueChange={setManualProjectValue}
-              manualCurrency={manualCurrency}
-              onManualCurrencyChange={setManualCurrency}
               showManualValueError={showManualValueError}
               manualCurveId={manualCurveId}
               onManualCurveChange={setManualCurveId}
@@ -190,6 +207,43 @@ function App() {
               onProjectBriefChange={handleProjectBriefChange}
               systemPrompt={aiSystemPrompt}
               onSystemPromptChange={handleSystemPromptChange}
+              companyRevenue={companyRevenue}
+              onCompanyRevenueChange={(value) => {
+                setCompanyRevenue(keepDigitsOnly(value))
+                setAiAnalysis(null)
+                setAnalysisError('')
+              }}
+              influencedPeople={influencedPeople}
+              onInfluencedPeopleChange={(value) => {
+                setInfluencedPeople(keepDigitsOnly(value))
+                setAiAnalysis(null)
+                setAnalysisError('')
+              }}
+              expectedRevenueIncrease={expectedRevenueIncrease}
+              onExpectedRevenueIncreaseChange={(value) => {
+                setExpectedRevenueIncrease(keepDigitsOnly(value))
+                setAiAnalysis(null)
+                setAnalysisError('')
+              }}
+              expectedCostReduction={expectedCostReduction}
+              onExpectedCostReductionChange={(value) => {
+                setExpectedCostReduction(keepDigitsOnly(value))
+                setAiAnalysis(null)
+                setAnalysisError('')
+              }}
+              intangibleBenefits={intangibleBenefits}
+              onIntangibleBenefitsChange={(value, checked) => {
+                setIntangibleBenefits((current) => {
+                  if (checked) {
+                    return current.includes(value) ? current : [...current, value]
+                  }
+
+                  return current.filter((item) => item !== value)
+                })
+                setAiAnalysis(null)
+                setAnalysisError('')
+              }}
+              intangibleBenefitsOptions={intangibleBenefitsOptions}
               canAnalyze={canAnalyze}
               isAnalyzing={isAnalyzing}
               onAnalyze={handleAnalyzeWithAi}
@@ -203,8 +257,6 @@ function App() {
               }}
               aiProjectValue={aiProjectValue}
               onAiProjectValueChange={setAiProjectValue}
-              aiCurrency={aiCurrency}
-              onAiCurrencyChange={setAiCurrency}
               showAiValueError={showAiValueError}
               aiAnalysis={aiAnalysis}
               aiCurve={aiCurve}

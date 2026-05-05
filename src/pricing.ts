@@ -5,6 +5,7 @@ export type CurrencyCode = 'EUR' | 'USD' | 'GBP'
 export type CurveConfig = {
   id: CurveId
   name: string
+  tierTag: string
   multipliers: [number, number, number]
 }
 
@@ -17,12 +18,14 @@ export type PriceTier = {
 export const curves: CurveConfig[] = [
   {
     id: 'might-as-well',
-    name: "Meh, I don't really care",
+    name: 'I want to land it really bad!',
+    tierTag: 'Goldilocks',
     multipliers: [0.1, 0.15, 0.175],
   },
   {
     id: 'goldilocks',
-    name: 'I want to land it really bad!',
+    name: "Meh, I don't really care",
+    tierTag: 'Might as well',
     multipliers: [0.1, 0.22, 0.5],
   },
 ]

@@ -15,6 +15,11 @@ type AnalyzeCurveRequest = {
   description: string
   acknowledgedWarning: boolean
   systemPrompt?: string
+  companyRevenue?: string
+  influencedPeople?: string
+  expectedRevenueIncrease?: string
+  expectedCostReduction?: string
+  intangibleBenefits?: string[]
 }
 
 type AnalyzeCurveSuggestionPayload = {
@@ -41,11 +46,48 @@ type OpenRouterApiResponse = {
 }
 
 export const hasConfiguredOpenRouterKey = openRouterApiKey.length > 0
+
+const AI_SYSTEM_PROMPT_LOCKED_PREFIX = [
+  'You are an expert in value-based pricing.',
+  '',
+  'Your role is to interpret commercial and consulting proposals through the lens of perceived client value rather than effort, hours worked, internal cost, or volume of deliverables.',
+  '',
+  'You think like a senior advisor focused on value:',
+  '- You prioritize results, business impact, strategic relevance, and meaningful change for the client.',
+  '- You do not treat hours, days, task lists, or delivery volume as the primary indicators of worth.',
+  '- You view pricing as something that should reflect the client\'s perceived value of the outcome, not the supplier\'s effort.',
+  '- You pay close attention to whether the proposal speaks to decision-makers with economic responsibility, not only operational or technical stakeholders.',
+  '- You distinguish clearly between what is being done and why it matters.',
+  '',
+  'Foundational principles:',
+  '1. Value matters more than time.',
+  '2. Results matter more than activities.',
+  '3. Business outcomes matter more than deliverables.',
+  '4. Pricing should reflect perceived client value.',
+  '5. A strong proposal makes impact, urgency, and expected gains visible.',
+  '6. A strong proposal speaks to the economic buyer, not only to users or technical stakeholders.',
+  '7. If price is disconnected from outcomes, the proposal is weak.',
+  '8. If the proposal explains the work in detail but not the change it creates, perceived value is low.',
+  '9. Reducing price without reducing scope or value is a sign of commercial weakness.',
+  '10. The more concretely a proposal expresses expected return, strategic gain, risk reduction, or opportunity creation, the stronger the perceived value.',
+  '',
+  'Operating mindset:',
+  '- Always focus on the value created for the client.',
+  '- Treat effort, process, and deliverables as secondary unless they are clearly connected to outcomes.',
+  '- Do not assume value is obvious unless it is explicitly expressed or strongly implied.',
+  '- Keep attention on impact, transformation, relevance, and investment logic.',
+  '- Maintain a distinction between service execution and client value.',
+  '- Think in terms of business improvement, strategic advantage, and decision justification.',
+].join('\n')
+
 export const defaultAiSystemPrompt = [
   'You are helping a value-based pricing calculator choose between two pricing curves.',
   'Curve options:',
-  'might-as-well = "Meh, I don\'t really care" - safer, easier to close, lower risk, naturally leans the buyer toward option 3.',
-  'goldilocks = "I want to land it really bad!" - bolder, higher-upside, premium-facing, naturally leans the buyer toward option 2.',
+  'might-as-well = "I want to land it really bad!" - safer, easier to close, lower risk, naturally leans the buyer toward option 3.',
+  'goldilocks = "Meh, I don\'t really care" - bolder, higher-upside, premium-facing, naturally leans the buyer toward option 2.',
+].join(' ')
+
+const AI_SYSTEM_PROMPT_LOCKED_SUFFIX = [
   'Return ONLY valid JSON with the following shape:',
   '{"curveId":"might-as-well|goldilocks","perceivedValue":123456,"summary":"one short sentence","reasoning":["short point","short point","short point"]}.',
   'perceivedValue must be a positive number in the client currency context, without symbols, ranges, or text.',
@@ -60,6 +102,11 @@ export async function analyzeCurveSuggestion({
   description,
   acknowledgedWarning,
   systemPrompt,
+  companyRevenue,
+  influencedPeople,
+  expectedRevenueIncrease,
+  expectedCostReduction,
+  intangibleBenefits,
 }: AnalyzeCurveRequest): Promise<CurveAnalysisResult> {
   if (!hasConfiguredOpenRouterKey) {
     throw new Error('AI is not configured for this deployment.')
@@ -69,7 +116,28 @@ export async function analyzeCurveSuggestion({
     throw new Error('You must confirm that you removed sensitive information before using AI analysis.')
   }
 
-  const normalizedSystemPrompt = systemPrompt?.trim() || defaultAiSystemPrompt
+  const promptBase = systemPrompt?.trim() || defaultAiSystemPrompt
+  const normalizedSystemPrompt = `${AI_SYSTEM_PROMPT_LOCKED_PREFIX}\n\n${promptBase}\n\n${AI_SYSTEM_PROMPT_LOCKED_SUFFIX}`.trim()
+  const userContent = buildUserContent({
+    description,
+    companyRevenue,
+    influencedPeople,
+    expectedRevenueIncrease,
+    expectedCostReduction,
+    intangibleBenefits,
+  })
+  const messages = [
+    {
+      role: 'system',
+      content: normalizedSystemPrompt,
+    },
+    {
+      role: 'user',
+      content: userContent,
+    },
+  ]
+
+  console.log('OpenRouter full prompt:', messages)
 
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -85,16 +153,7 @@ export async function analyzeCurveSuggestion({
       reasoning: {
         enabled: true,
       },
-      messages: [
-        {
-          role: 'system',
-          content: normalizedSystemPrompt,
-        },
-        {
-          role: 'user',
-          content: `Sanitized project brief:\n${description.trim()}`,
-        },
-      ],
+      messages,
     }),
   })
 
@@ -138,6 +197,53 @@ export async function analyzeCurveSuggestion({
     modelRoute:
       typeof suggestion.modelRoute === 'string' ? suggestion.modelRoute : OPENROUTER_MODEL_ROUTE,
   }
+}
+
+function buildUserContent({
+  description,
+  companyRevenue,
+  influencedPeople,
+  expectedRevenueIncrease,
+  expectedCostReduction,
+  intangibleBenefits,
+}: {
+  description: string
+  companyRevenue?: string
+  influencedPeople?: string
+  expectedRevenueIncrease?: string
+  expectedCostReduction?: string
+  intangibleBenefits?: string[]
+}) {
+  const normalizedIntangibleBenefits =
+    intangibleBenefits
+      ?.map((item) => item.trim())
+      .filter((item) => item.length > 0)
+      .join(', ') ?? ''
+
+  const optionalEntries: Array<[label: string, value: string | undefined]> = [
+    ['Company revenue', companyRevenue],
+    ['People impacted by the project', influencedPeople],
+    ['Expected revenue increase', expectedRevenueIncrease],
+    ['Expected cost reduction', expectedCostReduction],
+    ['Intangible or collateral benefits', normalizedIntangibleBenefits],
+  ]
+
+  const optionalLines = optionalEntries
+    .map(([label, value]) => {
+      const normalizedValue = value?.trim()
+      if (!normalizedValue) {
+        return ''
+      }
+
+      return `${label}: ${normalizedValue}`
+    })
+    .filter(Boolean)
+
+  if (optionalLines.length === 0) {
+    return `Sanitized project brief:\n${description.trim()}`
+  }
+
+  return [`Sanitized project brief:\n${description.trim()}`, 'Guided context (optional):', ...optionalLines].join('\n\n')
 }
 
 function parsePerceivedValue(value: unknown): number | null {

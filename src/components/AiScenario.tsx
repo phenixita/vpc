@@ -1,5 +1,5 @@
 import type { CurveAnalysisResult } from '../openrouter'
-import type { CurrencyCode, CurveConfig, PriceTier } from '../pricing'
+import type { CurveConfig, PriceTier } from '../pricing'
 import { PriceResults } from './PriceResults'
 import { ValueFields } from './ValueFields'
 
@@ -9,6 +9,17 @@ type AiScenarioProps = {
   onProjectBriefChange: (value: string) => void
   systemPrompt: string
   onSystemPromptChange: (value: string) => void
+  companyRevenue: string
+  onCompanyRevenueChange: (value: string) => void
+  influencedPeople: string
+  onInfluencedPeopleChange: (value: string) => void
+  expectedRevenueIncrease: string
+  onExpectedRevenueIncreaseChange: (value: string) => void
+  expectedCostReduction: string
+  onExpectedCostReductionChange: (value: string) => void
+  intangibleBenefits: string[]
+  onIntangibleBenefitsChange: (value: string, checked: boolean) => void
+  intangibleBenefitsOptions: string[]
   canAnalyze: boolean
   isAnalyzing: boolean
   onAnalyze: () => void
@@ -19,8 +30,6 @@ type AiScenarioProps = {
   onSanitizedBriefChange: (checked: boolean) => void
   aiProjectValue: string
   onAiProjectValueChange: (value: string) => void
-  aiCurrency: CurrencyCode
-  onAiCurrencyChange: (currency: CurrencyCode) => void
   showAiValueError: boolean
   aiAnalysis: CurveAnalysisResult | null
   aiCurve: CurveConfig | null
@@ -35,6 +44,17 @@ export function AiScenario({
   onProjectBriefChange,
   systemPrompt,
   onSystemPromptChange,
+  companyRevenue,
+  onCompanyRevenueChange,
+  influencedPeople,
+  onInfluencedPeopleChange,
+  expectedRevenueIncrease,
+  onExpectedRevenueIncreaseChange,
+  expectedCostReduction,
+  onExpectedCostReductionChange,
+  intangibleBenefits,
+  onIntangibleBenefitsChange,
+  intangibleBenefitsOptions,
   canAnalyze,
   isAnalyzing,
   onAnalyze,
@@ -45,8 +65,6 @@ export function AiScenario({
   onSanitizedBriefChange,
   aiProjectValue,
   onAiProjectValueChange,
-  aiCurrency,
-  onAiCurrencyChange,
   showAiValueError,
   aiAnalysis,
   aiCurve,
@@ -60,7 +78,8 @@ export function AiScenario({
         <h3>How to use this</h3>
         <ol>
           <li>Write your project prompt in the box below.</li>
-          <li>Press <strong>Ask AI to choose the curve</strong>.</li>
+          <li>Optionally fill the guided context fields to improve the estimate.</li>
+          <li>Press <strong>Ask AI to estimate value and choose the curve</strong>.</li>
         </ol>
         <p>
           After that, the app sets the suggested perceived value and automatically shows the three
@@ -85,6 +104,83 @@ export function AiScenario({
         />
       </div>
 
+      <div className="field-grid field-grid--two">
+        <div className="field">
+          <label htmlFor="companyRevenue">Company revenue (optional)</label>
+          <input
+            id="companyRevenue"
+            name="companyRevenue"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="Digits only"
+            value={companyRevenue}
+            onChange={(event) => onCompanyRevenueChange(event.target.value)}
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="influencedPeople">People impacted (optional)</label>
+          <input
+            id="influencedPeople"
+            name="influencedPeople"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="Digits only"
+            value={influencedPeople}
+            onChange={(event) => onInfluencedPeopleChange(event.target.value)}
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="expectedRevenueIncrease">Expected revenue increase (optional)</label>
+          <input
+            id="expectedRevenueIncrease"
+            name="expectedRevenueIncrease"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="Digits only"
+            value={expectedRevenueIncrease}
+            onChange={(event) => onExpectedRevenueIncreaseChange(event.target.value)}
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="expectedCostReduction">Expected cost reduction (optional)</label>
+          <input
+            id="expectedCostReduction"
+            name="expectedCostReduction"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="Digits only"
+            value={expectedCostReduction}
+            onChange={(event) => onExpectedCostReductionChange(event.target.value)}
+          />
+        </div>
+
+        <fieldset className="field multi-checkbox-field">
+          <legend>Intangible or collateral benefits (optional)</legend>
+          <p className="field-hint-text">Select one or more options.</p>
+          <div className="multi-checkbox-list">
+            {intangibleBenefitsOptions.map((option, index) => (
+              <label key={option} className="multi-checkbox-item" htmlFor={`intangible-benefit-${index}`}>
+                <input
+                  id={`intangible-benefit-${index}`}
+                  name="intangibleBenefits"
+                  type="checkbox"
+                  checked={intangibleBenefits.includes(option)}
+                  onChange={(event) => onIntangibleBenefitsChange(option, event.target.checked)}
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      </div>
+
       <details className="system-prompt-details">
         <summary>System prompt</summary>
         <div className="field">
@@ -98,22 +194,6 @@ export function AiScenario({
           />
         </div>
       </details>
-
-      <div className="actions">
-        <button type="button" className="primary-button" onClick={onAnalyze} disabled={!canAnalyze}>
-          {isAnalyzing ? 'Asking AI...' : 'Ask AI to choose the curve'}
-        </button>
-
-        {!hasConfiguredOpenRouterKey ? (
-          <p className="status-message">AI suggestions are not available right now.</p>
-        ) : null}
-
-        {analysisError ? (
-          <p className="field-error" role="alert">
-            {analysisError}
-          </p>
-        ) : null}
-      </div>
 
       <div className="warning-box">
         <h3>Important</h3>
@@ -135,13 +215,27 @@ export function AiScenario({
         </label>
       </div>
 
+      <div className="actions">
+        <button type="button" className="primary-button" onClick={onAnalyze} disabled={!canAnalyze}>
+          {isAnalyzing ? 'Asking AI...' : 'Ask AI to estimate value and choose the curve'}
+        </button>
+
+        {!hasConfiguredOpenRouterKey ? (
+          <p className="status-message">AI suggestions are not available right now.</p>
+        ) : null}
+
+        {analysisError ? (
+          <p className="field-error" role="alert">
+            {analysisError}
+          </p>
+        ) : null}
+      </div>
+
       <div className="field-grid field-grid--two">
         <ValueFields
           idPrefix="ai"
           projectValue={aiProjectValue}
           onProjectValueChange={onAiProjectValueChange}
-          currency={aiCurrency}
-          onCurrencyChange={onAiCurrencyChange}
           showValueError={showAiValueError}
         />
       </div>
