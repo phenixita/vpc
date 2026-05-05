@@ -75,7 +75,7 @@ The repository includes `.github/workflows/firebase-deploy.yml`.
 Required repository secrets:
 
 - `FIREBASE_PROJECT_ID`: the Firebase project ID to deploy to
-- `FIREBASE_SERVICE_ACCOUNT`: a service account JSON with permissions to deploy Hosting and Cloud Functions
+- `FIREBASE_TOKEN`: a Firebase CLI token or refresh token usable by `firebase-tools`
 
 On every push to `main`, the workflow:
 
