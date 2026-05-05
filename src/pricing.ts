@@ -17,12 +17,12 @@ export type PriceTier = {
 export const curves: CurveConfig[] = [
   {
     id: 'might-as-well',
-    name: 'Might As Well (MAW)',
+    name: "Meh, I don't really care",
     multipliers: [0.1, 0.15, 0.175],
   },
   {
     id: 'goldilocks',
-    name: 'Goldilocks',
+    name: 'I want to land it really bad!',
     multipliers: [0.1, 0.22, 0.5],
   },
 ]

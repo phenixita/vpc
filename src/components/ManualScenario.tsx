@@ -30,7 +30,7 @@ export function ManualScenario({
 }: ManualScenarioProps) {
   return (
     <section className="scenario" id="manual-panel" role="tabpanel" aria-labelledby="manual-tab">
-      <div className="field-grid field-grid--three">
+      <div className="field-grid">
         <ValueFields
           idPrefix="manual"
           projectValue={manualProjectValue}
@@ -41,7 +41,7 @@ export function ManualScenario({
         />
 
         <div className="field field--curve">
-          <label htmlFor="manual-curve">Price curve</label>
+          <label htmlFor="manual-curve">How bad do you want to land this project?</label>
           <select
             id="manual-curve"
             name="manual-curve"
@@ -55,6 +55,13 @@ export function ManualScenario({
               </option>
             ))}
           </select>
+          <div className="field-hint">
+            <p>This setting affects the pricing curve of your options.{' '}
+              <a href="https://jonathanstark.com/pricing-curves" target="_blank" rel="noopener noreferrer">
+                Get the formulas behind these pricing curves »
+              </a>
+            </p>
+          </div>
         </div>
       </div>
 

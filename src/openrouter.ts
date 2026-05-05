@@ -44,8 +44,8 @@ export const hasConfiguredOpenRouterKey = openRouterApiKey.length > 0
 export const defaultAiSystemPrompt = [
   'You are helping a value-based pricing calculator choose between two pricing curves.',
   'Curve options:',
-  'might-as-well = Might As Well (MAW), safer, easier to close, lower risk, and naturally leans the buyer toward option 3.',
-  'goldilocks = Goldilocks, bolder, higher-upside, premium-facing, and naturally leans the buyer toward option 2.',
+  'might-as-well = "Meh, I don\'t really care" - safer, easier to close, lower risk, naturally leans the buyer toward option 3.',
+  'goldilocks = "I want to land it really bad!" - bolder, higher-upside, premium-facing, naturally leans the buyer toward option 2.',
   'Return ONLY valid JSON with the following shape:',
   '{"curveId":"might-as-well|goldilocks","perceivedValue":123456,"summary":"one short sentence","reasoning":["short point","short point","short point"]}.',
   'perceivedValue must be a positive number in the client currency context, without symbols, ranges, or text.',

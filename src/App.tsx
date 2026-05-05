@@ -25,7 +25,7 @@ const MAX_PROJECT_BRIEF_LENGTH = 5000
 
 const scenarioTabs = [
   { id: 'manual', label: 'Manual' },
-  { id: 'ai', label: 'AI' },
+  { id: 'ai', label: 'AI assisted ✨' },
 ] satisfies Array<{ id: ScenarioTabId; label: string }>
 
 const aiWarningItems = [
