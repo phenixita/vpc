@@ -2,67 +2,70 @@
 
 ## Project overview
 
-Single-page React 19 + Vite 8 + TypeScript app for value-based pricing.  
-Deployed on **Firebase Hosting** with SPA rewrites.  
-AI curve suggestions via **OpenRouter** (free route).
+Single-page React 19 + Vite 8 + TypeScript app for value-based pricing.
+Deploy target: Firebase Hosting (SPA rewrite to `index.html`).
+AI suggestions use OpenRouter free route from the browser.
 
-See [README.md](./README.md) for full setup and deployment instructions.
+For setup and deployment details, link to [README.md](./README.md).
 
-## Commands
+## Commands agents should run
 
 | Command | Description |
-|---------|-------------|
-| `npm run dev` | Start Vite dev server on `localhost:5173` |
+|---|---|
+| `npm run dev` | Start local Vite dev server on `localhost:5173` |
+| `npm run lint` | Run ESLint across the repo |
 | `npm run build` | Type-check (`tsc -b`) then build (`vite build`) |
-| `npm run lint` | ESLint on all files |
-| `npm run deploy` | `firebase deploy --only hosting` |
+| `npm run deploy` | Deploy hosting with Firebase CLI |
 
-## Architecture
+CI uses Node 24 and `npm ci`; mirror that behavior when diagnosing CI-only failures.
 
-- **`src/App.tsx`** — Main component with two tabs: Manual (user picks curve) and AI (OpenRouter suggests curve)
-- **`src/openrouter.ts`** — OpenRouter API client; exports `analyzeCurveSuggestion()`, `hasConfiguredOpenRouterKey`, and `CurveId` type
-- **`src/vite-env.d.ts`** — Declares `ImportMetaEnv` with `VITE_OPENROUTER_API_KEY`
-- **`src/index.css`** — Global styles and CSS custom properties
-- **`src/App.css`** — Component styles
+## Architecture map
 
-## Pricing curves
+- `src/App.tsx`: Top-level shell with two tabs (`manual` and `ai`), orchestrates state.
+- `src/components/ManualScenario.tsx`: Manual calculator workflow.
+- `src/components/AiScenario.tsx`: AI workflow UI, warning acknowledgment, and result display.
+- `src/components/ValueFields.tsx`: Shared value/currency inputs.
+- `src/components/PriceResults.tsx`: Tiered price output rendering.
+- `src/pricing.ts`: Core pricing domain logic (curves, parsing, currency formatting, tier generation).
+- `src/openrouter.ts`: OpenRouter client, JSON response parsing/validation, guardrails.
+- `src/main.tsx`: React entry point.
+- `.github/workflows/firebase-deploy.yml`: Lint/build/deploy pipeline.
 
-Two curves, each with 3 multipliers applied to the perceived value:
+## Pricing domain facts
 
-| Curve | Multipliers | Use case |
-|-------|-------------|----------|
-| Campfire | 10%, 15%, 17.5% | Safer, easier to close, lower risk |
-| Moonshot | 10%, 22%, 50% | Bolder, higher-upside, premium-facing |
+Two supported curves (IDs are contractually important across app + AI payloads):
 
-## Key conventions
+- `might-as-well` -> multipliers `10%`, `15%`, `17.5%`
+- `goldilocks` -> multipliers `10%`, `22%`, `50%`
 
-- **TypeScript strict mode**: `noUnusedLocals`, `noUnusedParameters`, `verbatimModuleSyntax`, `erasableSyntaxOnly` are all enabled. Unused imports/variables cause build errors. Use `type` prefix for type-only imports.
-- **CSS**: Plain `.css` files (no CSS modules or Tailwind). CSS custom properties in `:root` (`--surface`, `--border`, `--text`, `--muted`, `--primary`, `--danger`).
-- **Vite env vars**: Must be prefixed `VITE_`. Only `VITE_OPENROUTER_API_KEY` is used. Embedded at build time.
-- **OpenRouter**: Uses `openrouter/free` route. API key is optional — if missing, the AI tab shows a disabled-state message.
-- **CI/CD**: GitHub Actions on push to `main` — lint, build, deploy to Firebase. Requires `FIREBASE_PROJECT_ID`, `FIREBASE_TOKEN`, and optionally `VITE_OPENROUTER_API_KEY` as secrets.
-- **Firebase**: SPA rewrite (`"source": "**"` → `/index.html`). Public dir is `dist`.
+If curve IDs change, update both `src/pricing.ts` and `src/openrouter.ts` prompt/schema logic together.
 
-## File structure
+## Conventions that matter for agents
 
-```
-src/
-  App.tsx          — Main UI component
-  App.css          — Component styles
-  index.css        — Global styles + CSS variables
-  main.tsx         — React entry point
-  openrouter.ts    — OpenRouter API client
-  vite-env.d.ts    — Vite env type declarations
-  assets/          — Static images (hero.png, react.svg, vite.svg)
-public/
-  favicon.svg      — Favicon
-  icons.svg        — SVG icons sprite
-.github/workflows/
-  firebase-deploy.yml  — CI/CD pipeline
-```
+- TypeScript strictness is high across app and node tsconfigs; unused locals/params fail builds.
+- `verbatimModuleSyntax` is enabled: use `import type` for type-only imports.
+- `erasableSyntaxOnly` is enabled: avoid enums and namespaces.
+- CSS is plain `.css` (no Tailwind, no CSS modules).
+- Vite env vars must start with `VITE_`; only `VITE_OPENROUTER_API_KEY` is used.
+- Local key setup is `.env.example` -> `.env.local` (see [README.md](./README.md)).
 
-## Potential pitfalls
+## AI and safety constraints
 
-- **Missing API key**: If `VITE_OPENROUTER_API_KEY` is not set at build time, `hasConfiguredOpenRouterKey` is `false` and the AI button stays disabled.
-- **TypeScript strictness**: `verbatimModuleSyntax` requires `import type` for type-only imports. `erasableSyntaxOnly` disallows enums and `namespace` keywords.
-- **OpenRouter free route**: The underlying model provider may change between requests. Responses are parsed as JSON from the LLM output — malformed JSON causes a fallback error.
+- AI analysis is disabled when `VITE_OPENROUTER_API_KEY` is not set at build time.
+- User must acknowledge that sensitive data was removed before AI request is allowed.
+- Prompt length cap exists in app (`MAX_PROJECT_BRIEF_LENGTH = 5000`).
+- OpenRouter output must parse into strict JSON with valid curve ID, positive perceived value, non-empty summary, and at least one reasoning item.
+- OpenRouter free route provider may vary; expect occasional output-shape drift and handle parse failures gracefully.
+
+## CI/CD facts
+
+- Workflow triggers on push to `main` and manual dispatch.
+- Required secrets: `FIREBASE_PROJECT_ID`, `FIREBASE_TOKEN`; `VITE_OPENROUTER_API_KEY` is optional.
+- Deployment command in CI uses `npx firebase-tools deploy --non-interactive`.
+
+## Pitfalls to avoid
+
+- Do not rename curve IDs casually; they are used in UI state, AI prompts, and response validation.
+- Do not assume US-only numeric input; `parseProjectValue` handles comma/dot variants.
+- Do not introduce non-`VITE_` env var names for frontend runtime needs.
+- Do not bypass AI warning acknowledgment checks in UI or API helper logic.

@@ -1,215 +1,37 @@
 import { useMemo, useState } from 'react'
+import { AiScenario } from './components/AiScenario'
+import { ManualScenario } from './components/ManualScenario'
 import {
   analyzeCurveSuggestion,
   hasConfiguredOpenRouterKey,
   type CurveAnalysisResult,
   type CurveId,
 } from './openrouter'
+import {
+  buildPriceTiers,
+  createCurrencyFormatter,
+  curveMap,
+  curves,
+  formatPerceivedValueForInput,
+  parseProjectValue,
+  type CurrencyCode,
+} from './pricing'
 import './App.css'
 
-type CurrencyCode = 'EUR' | 'USD' | 'GBP'
 type ScenarioTabId = 'manual' | 'ai'
 
-type CurveConfig = {
-  id: CurveId
-  name: string
-  multipliers: [number, number, number]
-}
-
-type PriceTier = {
-  label: string
-  amount: string
-  multiplierLabel: string
-}
-
-const MAX_PROJECT_BRIEF_LENGTH = 2000
+const MAX_PROJECT_BRIEF_LENGTH = 5000
 
 const scenarioTabs = [
   { id: 'manual', label: 'Manual' },
   { id: 'ai', label: 'AI' },
 ] satisfies Array<{ id: ScenarioTabId; label: string }>
 
-const curves: CurveConfig[] = [
-  {
-    id: 'might-as-well',
-    name: 'Might As Well (MAW)',
-    multipliers: [0.1, 0.15, 0.175],
-  },
-  {
-    id: 'goldilocks',
-    name: 'Goldilocks',
-    multipliers: [0.1, 0.22, 0.5],
-  },
-]
-
-const curveMap = Object.fromEntries(curves.map((curve) => [curve.id, curve])) as Record<
-  CurveId,
-  CurveConfig
->
-
-const currencies: Record<CurrencyCode, { label: string; locale: string }> = {
-  EUR: { label: 'Euro', locale: 'en-IE' },
-  USD: { label: 'US Dollar', locale: 'en-US' },
-  GBP: { label: 'Pound Sterling', locale: 'en-GB' },
-}
-
 const aiWarningItems = [
   'The prompt is sent through OpenRouter’s free route.',
   'The underlying provider may change from one request to another.',
   'Do not send names, secrets, or confidential information.',
 ]
-
-function parseProjectValue(rawValue: string): number | null {
-  const sanitized = rawValue.trim().replace(/[^\d.,]/g, '')
-
-  if (!sanitized) {
-    return null
-  }
-
-  const commaCount = sanitized.split(',').length - 1
-  const dotCount = sanitized.split('.').length - 1
-  let normalized = sanitized
-
-  if (commaCount > 0 && dotCount > 0) {
-    const lastComma = sanitized.lastIndexOf(',')
-    const lastDot = sanitized.lastIndexOf('.')
-    const decimalSeparator = lastComma > lastDot ? ',' : '.'
-    const thousandSeparator = decimalSeparator === ',' ? '.' : ','
-
-    normalized = sanitized.split(thousandSeparator).join('').replace(decimalSeparator, '.')
-  } else if (commaCount > 0) {
-    const digitsAfterComma = sanitized.length - sanitized.lastIndexOf(',') - 1
-    normalized =
-      commaCount === 1 && digitsAfterComma <= 2
-        ? sanitized.replace(',', '.')
-        : sanitized.replace(/,/g, '')
-  } else if (dotCount > 0) {
-    const digitsAfterDot = sanitized.length - sanitized.lastIndexOf('.') - 1
-    normalized = dotCount === 1 && digitsAfterDot <= 2 ? sanitized : sanitized.replace(/\./g, '')
-  }
-
-  const parsed = Number.parseFloat(normalized)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
-}
-
-function formatMultiplier(multiplier: number) {
-  return `${(multiplier * 100).toLocaleString('en-US', {
-    maximumFractionDigits: 1,
-  })}%`
-}
-
-function createCurrencyFormatter(currency: CurrencyCode) {
-  return new Intl.NumberFormat(currencies[currency].locale, {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-  })
-}
-
-function buildPriceTiers({
-  formatter,
-  parsedValue,
-  selectedCurve,
-}: {
-  formatter: Intl.NumberFormat
-  parsedValue: number | null
-  selectedCurve: CurveConfig | null
-}): PriceTier[] {
-  if (!selectedCurve || !parsedValue) {
-    return []
-  }
-
-  return selectedCurve.multipliers.map((multiplier, index) => ({
-    label: `Tier ${index + 1}`,
-    amount: formatter.format(Math.floor(parsedValue * multiplier)),
-    multiplierLabel: formatMultiplier(multiplier),
-  }))
-}
-
-type ValueFieldsProps = {
-  idPrefix: string
-  projectValue: string
-  onProjectValueChange: (value: string) => void
-  currency: CurrencyCode
-  onCurrencyChange: (currency: CurrencyCode) => void
-  showValueError: boolean
-}
-
-function ValueFields({
-  idPrefix,
-  projectValue,
-  onProjectValueChange,
-  currency,
-  onCurrencyChange,
-  showValueError,
-}: ValueFieldsProps) {
-  return (
-    <>
-      <div className="field">
-        <label htmlFor={`${idPrefix}-projectValue`}>Perceived value</label>
-        <input
-          id={`${idPrefix}-projectValue`}
-          name={`${idPrefix}-projectValue`}
-          type="text"
-          inputMode="decimal"
-          autoComplete="off"
-          placeholder="100,000"
-          value={projectValue}
-          onChange={(event) => onProjectValueChange(event.target.value)}
-        />
-        {showValueError ? <p className="field-error">Enter a valid amount.</p> : null}
-      </div>
-
-      <div className="field">
-        <label htmlFor={`${idPrefix}-currency`}>Currency</label>
-        <select
-          id={`${idPrefix}-currency`}
-          name={`${idPrefix}-currency`}
-          value={currency}
-          onChange={(event) => onCurrencyChange(event.target.value as CurrencyCode)}
-        >
-          {Object.entries(currencies).map(([code, details]) => (
-            <option key={code} value={code}>
-              {code} · {details.label}
-            </option>
-          ))}
-        </select>
-      </div>
-    </>
-  )
-}
-
-type PriceResultsProps = {
-  curve: CurveConfig | null
-  title: string
-  tiers: PriceTier[]
-  emptyMessage: string
-}
-
-function PriceResults({ curve, title, tiers, emptyMessage }: PriceResultsProps) {
-  return (
-    <section className="results" aria-live="polite">
-      <div className="results-header">
-        <h3>{title}</h3>
-        {curve ? <span className="curve-pill">{curve.name}</span> : null}
-      </div>
-
-      {tiers.length > 0 ? (
-        <div className="tier-grid">
-          {tiers.map((tier) => (
-            <article className="tier-card" key={tier.label}>
-              <span className="tier-label">{tier.label}</span>
-              <strong className="tier-amount">{tier.amount}</strong>
-              <span className="tier-multiplier">{tier.multiplierLabel}</span>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <p className="empty-message">{emptyMessage}</p>
-      )}
-    </section>
-  )
-}
 
 function App() {
   const [activeTab, setActiveTab] = useState<ScenarioTabId>('manual')
@@ -236,6 +58,10 @@ function App() {
 
   const manualCurve = manualCurveId ? curveMap[manualCurveId] : null
   const aiCurve = aiAnalysis ? curveMap[aiAnalysis.curveId] : null
+  const aiSuggestedPerceivedValue =
+    aiAnalysis && Number.isFinite(aiAnalysis.perceivedValue)
+      ? aiFormatter.format(Math.floor(aiAnalysis.perceivedValue))
+      : ''
 
   const manualTiers = useMemo(
     () =>
@@ -289,6 +115,7 @@ function App() {
       })
 
       setAiAnalysis(result)
+      setAiProjectValue(formatPerceivedValueForInput(result.perceivedValue))
     } catch (error) {
       setAiAnalysis(null)
       setAnalysisError(error instanceof Error ? error.message : 'The AI analysis failed.')
@@ -333,150 +160,45 @@ function App() {
 
         <main className="panel">
           {activeTab === 'manual' ? (
-            <section
-              className="scenario"
-              id="manual-panel"
-              role="tabpanel"
-              aria-labelledby="manual-tab"
-            >
-              <div className="field-grid field-grid--three">
-                <ValueFields
-                  idPrefix="manual"
-                  projectValue={manualProjectValue}
-                  onProjectValueChange={setManualProjectValue}
-                  currency={manualCurrency}
-                  onCurrencyChange={setManualCurrency}
-                  showValueError={showManualValueError}
-                />
-
-                <div className="field field--curve">
-                  <label htmlFor="manual-curve">Price curve</label>
-                  <select
-                    id="manual-curve"
-                    name="manual-curve"
-                    value={manualCurveId}
-                    onChange={(event) => setManualCurveId(event.target.value as CurveId | '')}
-                  >
-                    <option value="">Choose...</option>
-                    {curves.map((curve) => (
-                      <option key={curve.id} value={curve.id}>
-                        {curve.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <PriceResults
-                curve={manualCurve}
-                title="3 price tiers"
-                tiers={manualTiers}
-                emptyMessage="Enter the perceived value and choose a curve."
-              />
-            </section>
+            <ManualScenario
+              manualProjectValue={manualProjectValue}
+              onManualProjectValueChange={setManualProjectValue}
+              manualCurrency={manualCurrency}
+              onManualCurrencyChange={setManualCurrency}
+              showManualValueError={showManualValueError}
+              manualCurveId={manualCurveId}
+              onManualCurveChange={setManualCurveId}
+              manualCurve={manualCurve}
+              manualTiers={manualTiers}
+              curves={curves}
+            />
           ) : (
-            <section className="scenario" id="ai-panel" role="tabpanel" aria-labelledby="ai-tab">
-              <div className="field">
-                <div className="field-header">
-                  <label htmlFor="projectBrief">Prompt</label>
-                  <span className="character-count">
-                    {projectBrief.length} / {MAX_PROJECT_BRIEF_LENGTH}
-                  </span>
-                </div>
-                <textarea
-                  id="projectBrief"
-                  name="projectBrief"
-                  maxLength={MAX_PROJECT_BRIEF_LENGTH}
-                  placeholder="Describe the project and add context such as region, client revenue, typical buyer mindset, urgency, risk, and upside."
-                  value={projectBrief}
-                  onChange={(event) => handleProjectBriefChange(event.target.value)}
-                />
-              </div>
-
-              <div className="field-grid field-grid--two">
-                <ValueFields
-                  idPrefix="ai"
-                  projectValue={aiProjectValue}
-                  onProjectValueChange={setAiProjectValue}
-                  currency={aiCurrency}
-                  onCurrencyChange={setAiCurrency}
-                  showValueError={showAiValueError}
-                />
-              </div>
-
-              <div className="warning-box">
-                <h3>Warning</h3>
-                <ul>
-                  {aiWarningItems.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-
-                <label className="checkbox-row" htmlFor="sanitizedBrief">
-                  <input
-                    id="sanitizedBrief"
-                    name="sanitizedBrief"
-                    type="checkbox"
-                    checked={hasSanitizedBrief}
-                    onChange={(event) => {
-                      setHasSanitizedBrief(event.target.checked)
-                      setAnalysisError('')
-                    }}
-                  />
-                  <span>I confirmed the prompt is sanitized.</span>
-                </label>
-              </div>
-
-              <div className="actions">
-                <button
-                  type="button"
-                  className="primary-button"
-                  onClick={handleAnalyzeWithAi}
-                  disabled={!canAnalyze}
-                >
-                  {isAnalyzing ? 'Asking AI...' : 'Ask AI to choose the curve'}
-                </button>
-
-                {!hasConfiguredOpenRouterKey ? (
-                  <p className="status-message">
-                    AI is unavailable until VITE_OPENROUTER_API_KEY is configured.
-                  </p>
-                ) : null}
-
-                {analysisError ? (
-                  <p className="field-error" role="alert">
-                    {analysisError}
-                  </p>
-                ) : null}
-              </div>
-
-              {aiAnalysis ? (
-                <section className="ai-explanation" aria-live="polite">
-                  <div className="results-header">
-                    <h3>AI recommendation</h3>
-                    <span className="curve-pill">{curveMap[aiAnalysis.curveId].name}</span>
-                  </div>
-
-                  <p className="ai-summary">{aiAnalysis.summary}</p>
-
-                  <div className="ai-reasoning">
-                    <h4>Reasoning</h4>
-                    <ul>
-                      {aiAnalysis.reasoning.map((item, index) => (
-                        <li key={`${index}-${item}`}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </section>
-              ) : null}
-
-              <PriceResults
-                curve={aiCurve}
-                title="3 price tiers"
-                tiers={aiTiers}
-                emptyMessage={aiEmptyMessage}
-              />
-            </section>
+            <AiScenario
+              projectBrief={projectBrief}
+              maxProjectBriefLength={MAX_PROJECT_BRIEF_LENGTH}
+              onProjectBriefChange={handleProjectBriefChange}
+              canAnalyze={canAnalyze}
+              isAnalyzing={isAnalyzing}
+              onAnalyze={handleAnalyzeWithAi}
+              hasConfiguredOpenRouterKey={hasConfiguredOpenRouterKey}
+              analysisError={analysisError}
+              aiWarningItems={aiWarningItems}
+              hasSanitizedBrief={hasSanitizedBrief}
+              onSanitizedBriefChange={(isChecked) => {
+                setHasSanitizedBrief(isChecked)
+                setAnalysisError('')
+              }}
+              aiProjectValue={aiProjectValue}
+              onAiProjectValueChange={setAiProjectValue}
+              aiCurrency={aiCurrency}
+              onAiCurrencyChange={setAiCurrency}
+              showAiValueError={showAiValueError}
+              aiAnalysis={aiAnalysis}
+              aiCurve={aiCurve}
+              aiSuggestedPerceivedValue={aiSuggestedPerceivedValue}
+              aiTiers={aiTiers}
+              aiEmptyMessage={aiEmptyMessage}
+            />
           )}
         </main>
 
