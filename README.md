@@ -3,6 +3,8 @@
 > **AI-assisted value-based pricing, powered by OpenRouter's free tier.**  
 > Based on Jonathan Stark's [Value Pricing Calculator](https://jonathanstark.com/vpc/).
 
+![Value Pricing Calculator screenshot](./public/value-pricing-calculator-screenshot.png)
+
 ---
 
 ## ✨ What is this?
