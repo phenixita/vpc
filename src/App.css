@@ -315,6 +315,18 @@
   text-decoration: none;
 }
 
+.attribution-icon-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+}
+
+.attribution-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
 .attribution a:hover,
 .attribution a:focus-visible {
   text-decoration: underline;
