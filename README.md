@@ -5,9 +5,9 @@ This project prices a project with the **Campfire** or **Moonshot** curve and ca
 The app now runs as:
 
 - a static React/Vite frontend on **Firebase Hosting**
-- a minimal **Firebase HTTPS Function** for the AI route
+- a direct browser call to OpenRouter using a **Vite build-time env variable**
 
-The shared OpenRouter key never lives in the browser.
+In this simplified setup, the user never types the key into the UI, but the key is still embedded in the client bundle at build time.
 
 ## Local development
 
@@ -17,30 +17,19 @@ The shared OpenRouter key never lives in the browser.
    npm install
    ```
 
-2. Install the Firebase Function dependencies:
+2. Copy `.env.example` to `.env.local` in the repository root and add your OpenRouter key:
 
    ```bash
-   npm --prefix functions install
+   copy .env.example .env.local
    ```
 
-3. Copy `.env.example` to `.secret.local` in the repository root and add your local OpenRouter key:
-
-   ```bash
-   copy .env.example .secret.local
-   ```
-
-4. Start the app:
+3. Start the app:
 
    ```bash
    npm run dev
    ```
 
-This starts:
-
-- the Firebase Functions emulator on the local demo project `demo-vpc`
-- the Vite frontend on `http://localhost:5173`
-
-The Vite dev server proxies `/api/analyze-curve` to the local Firebase Function.
+The Vite frontend runs on `http://localhost:5173`.
 
 ## Firebase deployment
 
@@ -56,13 +45,7 @@ The Vite dev server proxies `/api/analyze-curve` to the local Firebase Function.
    firebase use --add
    ```
 
-3. Set the production secret in Firebase Secret Manager:
-
-   ```bash
-   firebase functions:secrets:set OPENROUTER_KEY --project your-project-id
-   ```
-
-4. Deploy Hosting + Functions:
+3. Deploy Hosting:
 
    ```bash
    npm run deploy -- --project your-project-id
@@ -76,20 +59,18 @@ Required repository secrets:
 
 - `FIREBASE_PROJECT_ID`: the Firebase project ID to deploy to
 - `FIREBASE_TOKEN`: a Firebase CLI token or refresh token usable by `firebase-tools`
-- `FIREBASE_FUNCTIONS_ENABLED`: set to `true` only after upgrading the Firebase project to Blaze and configuring `OPENROUTER_KEY`
+- `VITE_OPENROUTER_API_KEY`: optional, but required if you want AI suggestions in the deployed build
 
 On every push to `main`, the workflow:
 
-1. installs root and function dependencies
+1. installs root dependencies
 2. runs `npm run lint`
 3. runs `npm run build`
 4. deploys **Hosting** with the Firebase CLI
-5. deploys **Functions** only when `FIREBASE_FUNCTIONS_ENABLED=true`
 
-`OPENROUTER_KEY` stays in Firebase Secret Manager and is not stored in GitHub.
+If `VITE_OPENROUTER_API_KEY` is missing, the deployed UI stays live but the AI button remains disabled.
 
 ## Project structure
 
 - `src/` - React frontend
-- `functions/` - Firebase HTTPS Function for AI curve analysis
 - `firebase.json` - Hosting + rewrite configuration

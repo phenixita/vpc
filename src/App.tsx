@@ -1,5 +1,10 @@
 import { useMemo, useState } from 'react'
-import { analyzeCurveSuggestion, type CurveAnalysisResult, type CurveId } from './openrouter'
+import {
+  analyzeCurveSuggestion,
+  hasConfiguredOpenRouterKey,
+  type CurveAnalysisResult,
+  type CurveId,
+} from './openrouter'
 import './App.css'
 
 type CurrencyCode = 'EUR' | 'USD' | 'GBP'
@@ -402,7 +407,7 @@ function App() {
   const briefLength = projectBrief.trim().length
   const showBriefError = projectBrief.trim() !== '' && briefLength < 30
   const remainingCharacters = MAX_PROJECT_BRIEF_LENGTH - projectBrief.length
-  const canAnalyze = briefLength >= 30 && hasSanitizedBrief && !isAnalyzing
+  const canAnalyze = hasConfiguredOpenRouterKey && briefLength >= 30 && hasSanitizedBrief && !isAnalyzing
 
   const formatter = useMemo(
     () =>
@@ -553,16 +558,16 @@ function App() {
                   <div className="settings-card">
                     <div className="settings-card__copy">
                       <p className="section-kicker">Shared AI route</p>
-                      <h3>No browser API key required</h3>
+                      <h3>No user API key input</h3>
                       <p>
-                        The browser only sends the sanitized brief. The shared OpenRouter key stays
-                        in Firebase-managed server-side configuration.
+                        This deployment reads the OpenRouter key from its Vite environment at build
+                        time, so the user never has to paste a key into the interface.
                       </p>
                     </div>
 
                     <div className="pill-row">
                       <span className="status-pill">Model route: {OPENROUTER_MODEL_ROUTE}</span>
-                      <span className="status-pill">Served through Firebase</span>
+                      <span className="status-pill">Frontend-only AI call</span>
                     </div>
                   </div>
 
@@ -627,8 +632,9 @@ function App() {
                       {isAnalyzing ? 'Analyzing project…' : 'Ask AI for a curve suggestion'}
                     </button>
                     <p className="status-note">
-                      The AI suggestion auto-selects the curve in this tab, but you can still
-                      override it manually.
+                      {hasConfiguredOpenRouterKey
+                        ? 'The AI suggestion auto-selects the curve in this tab, but you can still override it manually.'
+                        : 'AI stays disabled until VITE_OPENROUTER_API_KEY is provided to the build.'}
                     </p>
                   </div>
 
