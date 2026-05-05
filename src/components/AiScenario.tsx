@@ -7,6 +7,8 @@ type AiScenarioProps = {
   projectBrief: string
   maxProjectBriefLength: number
   onProjectBriefChange: (value: string) => void
+  systemPrompt: string
+  onSystemPromptChange: (value: string) => void
   canAnalyze: boolean
   isAnalyzing: boolean
   onAnalyze: () => void
@@ -31,6 +33,8 @@ export function AiScenario({
   projectBrief,
   maxProjectBriefLength,
   onProjectBriefChange,
+  systemPrompt,
+  onSystemPromptChange,
   canAnalyze,
   isAnalyzing,
   onAnalyze,
@@ -68,6 +72,20 @@ export function AiScenario({
           onChange={(event) => onProjectBriefChange(event.target.value)}
         />
       </div>
+
+      <details className="system-prompt-details">
+        <summary>System prompt</summary>
+        <div className="field">
+          <label htmlFor="systemPrompt">System prompt (optional)</label>
+          <textarea
+            id="systemPrompt"
+            name="systemPrompt"
+            className="system-prompt-textarea"
+            value={systemPrompt}
+            onChange={(event) => onSystemPromptChange(event.target.value)}
+          />
+        </div>
+      </details>
 
       <div className="actions">
         <button type="button" className="primary-button" onClick={onAnalyze} disabled={!canAnalyze}>
@@ -128,7 +146,7 @@ export function AiScenario({
 
           <div className="ai-reasoning">
             <h4>Reasoning</h4>
-            <ul>
+            <ul className="ai-reasoning-list">
               {aiAnalysis.reasoning.map((item, index) => (
                 <li key={`${index}-${item}`}>{item}</li>
               ))}

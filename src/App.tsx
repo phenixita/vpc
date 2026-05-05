@@ -3,6 +3,7 @@ import { AiScenario } from './components/AiScenario'
 import { ManualScenario } from './components/ManualScenario'
 import {
   analyzeCurveSuggestion,
+  defaultAiSystemPrompt,
   hasConfiguredOpenRouterKey,
   type CurveAnalysisResult,
   type CurveId,
@@ -43,6 +44,7 @@ function App() {
   const [aiCurrency, setAiCurrency] = useState<CurrencyCode>('EUR')
   const [aiAnalysis, setAiAnalysis] = useState<CurveAnalysisResult | null>(null)
   const [projectBrief, setProjectBrief] = useState('')
+  const [aiSystemPrompt, setAiSystemPrompt] = useState(defaultAiSystemPrompt)
   const [hasSanitizedBrief, setHasSanitizedBrief] = useState(false)
   const [analysisError, setAnalysisError] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -112,6 +114,7 @@ function App() {
       const result = await analyzeCurveSuggestion({
         description: projectBrief.trim(),
         acknowledgedWarning: hasSanitizedBrief,
+        systemPrompt: aiSystemPrompt,
       })
 
       setAiAnalysis(result)
@@ -126,6 +129,12 @@ function App() {
 
   function handleProjectBriefChange(value: string) {
     setProjectBrief(value)
+    setAiAnalysis(null)
+    setAnalysisError('')
+  }
+
+  function handleSystemPromptChange(value: string) {
+    setAiSystemPrompt(value)
     setAiAnalysis(null)
     setAnalysisError('')
   }
@@ -177,6 +186,8 @@ function App() {
               projectBrief={projectBrief}
               maxProjectBriefLength={MAX_PROJECT_BRIEF_LENGTH}
               onProjectBriefChange={handleProjectBriefChange}
+              systemPrompt={aiSystemPrompt}
+              onSystemPromptChange={handleSystemPromptChange}
               canAnalyze={canAnalyze}
               isAnalyzing={isAnalyzing}
               onAnalyze={handleAnalyzeWithAi}

@@ -14,6 +14,7 @@ const openRouterApiKey = import.meta.env.VITE_OPENROUTER_API_KEY?.trim() ?? ''
 type AnalyzeCurveRequest = {
   description: string
   acknowledgedWarning: boolean
+  systemPrompt?: string
 }
 
 type AnalyzeCurveSuggestionPayload = {
@@ -40,6 +41,16 @@ type OpenRouterApiResponse = {
 }
 
 export const hasConfiguredOpenRouterKey = openRouterApiKey.length > 0
+export const defaultAiSystemPrompt = [
+  'You are helping a value-based pricing calculator choose between two pricing curves.',
+  'Curve options:',
+  'might-as-well = Might As Well (MAW), safer, easier to close, lower risk, and naturally leans the buyer toward option 3.',
+  'goldilocks = Goldilocks, bolder, higher-upside, premium-facing, and naturally leans the buyer toward option 2.',
+  'Return ONLY valid JSON with the following shape:',
+  '{"curveId":"might-as-well|goldilocks","perceivedValue":123456,"summary":"one short sentence","reasoning":["short point","short point","short point"]}.',
+  'perceivedValue must be a positive number in the client currency context, without symbols, ranges, or text.',
+  'Do not include markdown or any extra text.',
+].join(' ')
 
 function isCurveId(value: unknown): value is CurveId {
   return value === 'might-as-well' || value === 'goldilocks'
@@ -48,6 +59,7 @@ function isCurveId(value: unknown): value is CurveId {
 export async function analyzeCurveSuggestion({
   description,
   acknowledgedWarning,
+  systemPrompt,
 }: AnalyzeCurveRequest): Promise<CurveAnalysisResult> {
   if (!hasConfiguredOpenRouterKey) {
     throw new Error('AI is not configured for this deployment.')
@@ -56,6 +68,8 @@ export async function analyzeCurveSuggestion({
   if (!acknowledgedWarning) {
     throw new Error('You must confirm that you removed sensitive information before using AI analysis.')
   }
+
+  const normalizedSystemPrompt = systemPrompt?.trim() || defaultAiSystemPrompt
 
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -74,16 +88,7 @@ export async function analyzeCurveSuggestion({
       messages: [
         {
           role: 'system',
-          content: [
-            'You are helping a value-based pricing calculator choose between two pricing curves.',
-            'Curve options:',
-            'might-as-well = Might As Well (MAW), safer, easier to close, lower risk, and naturally leans the buyer toward option 3.',
-            'goldilocks = Goldilocks, bolder, higher-upside, premium-facing, and naturally leans the buyer toward option 2.',
-            'Return ONLY valid JSON with the following shape:',
-            '{"curveId":"might-as-well|goldilocks","perceivedValue":123456,"summary":"one short sentence","reasoning":["short point","short point","short point"]}.',
-            'perceivedValue must be a positive number in the client currency context, without symbols, ranges, or text.',
-            'Do not include markdown or any extra text.',
-          ].join(' '),
+          content: normalizedSystemPrompt,
         },
         {
           role: 'user',

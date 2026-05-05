@@ -172,6 +172,27 @@
   gap: 10px;
 }
 
+.system-prompt-details {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #ffffff;
+}
+
+.system-prompt-details summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.system-prompt-details[open] {
+  display: grid;
+  gap: 10px;
+}
+
+.system-prompt-textarea {
+  min-height: 140px;
+}
+
 .primary-button {
   border: 0;
   border-radius: 12px;
@@ -221,6 +242,12 @@
   padding-left: 18px;
   display: grid;
   gap: 8px;
+}
+
+.ai-reasoning-list {
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 8px;
 }
 
 .tier-grid {
