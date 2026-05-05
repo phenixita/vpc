@@ -76,13 +76,15 @@ Required repository secrets:
 
 - `FIREBASE_PROJECT_ID`: the Firebase project ID to deploy to
 - `FIREBASE_TOKEN`: a Firebase CLI token or refresh token usable by `firebase-tools`
+- `FIREBASE_FUNCTIONS_ENABLED`: set to `true` only after upgrading the Firebase project to Blaze and configuring `OPENROUTER_KEY`
 
 On every push to `main`, the workflow:
 
 1. installs root and function dependencies
 2. runs `npm run lint`
 3. runs `npm run build`
-4. deploys `hosting,functions` with the Firebase CLI
+4. deploys **Hosting** with the Firebase CLI
+5. deploys **Functions** only when `FIREBASE_FUNCTIONS_ENABLED=true`
 
 `OPENROUTER_KEY` stays in Firebase Secret Manager and is not stored in GitHub.
 

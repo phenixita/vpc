@@ -38,8 +38,15 @@ jobs:
       - name: Build frontend
         run: npm run build
 
-      - name: Deploy to Firebase
-        run: npx firebase-tools deploy --only hosting,functions --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" --non-interactive
+      - name: Deploy Hosting to Firebase
+        run: npx firebase-tools deploy --only hosting --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" --non-interactive
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Deploy Functions to Firebase
+        if: ${{ secrets.FIREBASE_FUNCTIONS_ENABLED == 'true' }}
+        run: npx firebase-tools deploy --only functions --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" --non-interactive
         env:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
