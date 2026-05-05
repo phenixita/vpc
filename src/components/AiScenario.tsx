@@ -56,6 +56,18 @@ export function AiScenario({
 }: AiScenarioProps) {
   return (
     <section className="scenario" id="ai-panel" role="tabpanel" aria-labelledby="ai-tab">
+      <div className="ai-guide" aria-label="How to use AI pricing">
+        <h3>How to use this</h3>
+        <ol>
+          <li>Write your project prompt in the box below.</li>
+          <li>Press <strong>Ask AI to choose the curve</strong>.</li>
+        </ol>
+        <p>
+          After that, the app sets the suggested perceived value and automatically shows the three
+          price tiers.
+        </p>
+      </div>
+
       <div className="field">
         <div className="field-header">
           <label htmlFor="projectBrief">Prompt</label>
@@ -93,7 +105,7 @@ export function AiScenario({
         </button>
 
         {!hasConfiguredOpenRouterKey ? (
-          <p className="status-message">AI is unavailable until VITE_OPENROUTER_API_KEY is configured.</p>
+          <p className="status-message">AI suggestions are not available right now.</p>
         ) : null}
 
         {analysisError ? (
@@ -104,7 +116,7 @@ export function AiScenario({
       </div>
 
       <div className="warning-box">
-        <h3>Warning</h3>
+        <h3>Important</h3>
         <ul>
           {aiWarningItems.map((item) => (
             <li key={item}>{item}</li>
@@ -119,7 +131,7 @@ export function AiScenario({
             checked={hasSanitizedBrief}
             onChange={(event) => onSanitizedBriefChange(event.target.checked)}
           />
-          <span>I confirmed the prompt is sanitized.</span>
+          <span>I understand and I removed sensitive information.</span>
         </label>
       </div>
 

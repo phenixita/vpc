@@ -29,9 +29,10 @@ const scenarioTabs = [
 ] satisfies Array<{ id: ScenarioTabId; label: string }>
 
 const aiWarningItems = [
-  'The prompt is sent through OpenRouter’s free route.',
-  'The underlying provider may change from one request to another.',
-  'Do not send names, secrets, or confidential information.',
+  'Your text is sent to external AI services.',
+  'We cannot guarantee how your data is used, including possible model training.',
+  'We cannot guarantee where your data is processed or stored geographically.',
+  'Do not include names, secrets, or confidential information.',
 ]
 
 function App() {
@@ -92,7 +93,7 @@ function App() {
 
   async function handleAnalyzeWithAi() {
     if (!hasConfiguredOpenRouterKey) {
-      setAnalysisError('AI is unavailable until VITE_OPENROUTER_API_KEY is configured.')
+      setAnalysisError('AI suggestions are not available right now.')
       return
     }
 

@@ -140,6 +140,27 @@
   border: 1px solid var(--border);
 }
 
+.ai-guide {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid #c9d6ff;
+  background: #f5f8ff;
+}
+
+.ai-guide h3,
+.ai-guide p,
+.ai-guide ol {
+  margin: 0;
+}
+
+.ai-guide ol {
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+}
+
 .warning-box {
   background: #fff8eb;
   border-color: #f5d8a8;
