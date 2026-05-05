@@ -1,6 +1,6 @@
 # Value Pricing Calculator
 
-This project prices a project with the **Campfire** or **Moonshot** curve and can optionally ask AI to suggest the best curve from a sanitized project brief.
+This project is based on Jonathan Stark's [Value Pricing Calculator](https://jonathanstark.com/vpc/) and prices a project with the **Might As Well (MAW)** or **Goldilocks** curve. It can optionally ask AI to suggest the best curve from a sanitized project brief.
 
 The app now runs as:
 

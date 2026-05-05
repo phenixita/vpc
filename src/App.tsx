@@ -1,5 +1,10 @@
 import { useMemo, useState } from 'react'
-import { analyzeCurveSuggestion, hasConfiguredOpenRouterKey, type CurveId } from './openrouter'
+import {
+  analyzeCurveSuggestion,
+  hasConfiguredOpenRouterKey,
+  type CurveAnalysisResult,
+  type CurveId,
+} from './openrouter'
 import './App.css'
 
 type CurrencyCode = 'EUR' | 'USD' | 'GBP'
@@ -26,13 +31,13 @@ const scenarioTabs = [
 
 const curves: CurveConfig[] = [
   {
-    id: 'campfire',
-    name: 'Campfire',
+    id: 'might-as-well',
+    name: 'Might As Well (MAW)',
     multipliers: [0.1, 0.15, 0.175],
   },
   {
-    id: 'moonshot',
-    name: 'Moonshot',
+    id: 'goldilocks',
+    name: 'Goldilocks',
     multipliers: [0.1, 0.22, 0.5],
   },
 ]
@@ -214,7 +219,7 @@ function App() {
 
   const [aiProjectValue, setAiProjectValue] = useState('')
   const [aiCurrency, setAiCurrency] = useState<CurrencyCode>('EUR')
-  const [aiCurveId, setAiCurveId] = useState<CurveId | ''>('')
+  const [aiAnalysis, setAiAnalysis] = useState<CurveAnalysisResult | null>(null)
   const [projectBrief, setProjectBrief] = useState('')
   const [hasSanitizedBrief, setHasSanitizedBrief] = useState(false)
   const [analysisError, setAnalysisError] = useState('')
@@ -230,7 +235,7 @@ function App() {
   const aiFormatter = useMemo(() => createCurrencyFormatter(aiCurrency), [aiCurrency])
 
   const manualCurve = manualCurveId ? curveMap[manualCurveId] : null
-  const aiCurve = aiCurveId ? curveMap[aiCurveId] : null
+  const aiCurve = aiAnalysis ? curveMap[aiAnalysis.curveId] : null
 
   const manualTiers = useMemo(
     () =>
@@ -275,6 +280,7 @@ function App() {
 
     setIsAnalyzing(true)
     setAnalysisError('')
+    setAiAnalysis(null)
 
     try {
       const result = await analyzeCurveSuggestion({
@@ -282,8 +288,9 @@ function App() {
         acknowledgedWarning: hasSanitizedBrief,
       })
 
-      setAiCurveId(result.curveId)
+      setAiAnalysis(result)
     } catch (error) {
+      setAiAnalysis(null)
       setAnalysisError(error instanceof Error ? error.message : 'The AI analysis failed.')
     } finally {
       setIsAnalyzing(false)
@@ -292,7 +299,7 @@ function App() {
 
   function handleProjectBriefChange(value: string) {
     setProjectBrief(value)
-    setAiCurveId('')
+    setAiAnalysis(null)
     setAnalysisError('')
   }
 
@@ -380,7 +387,7 @@ function App() {
                   id="projectBrief"
                   name="projectBrief"
                   maxLength={MAX_PROJECT_BRIEF_LENGTH}
-                  placeholder="Describe the project, value, urgency, risk, and upside."
+                  placeholder="Describe the project and add context such as region, client revenue, typical buyer mindset, urgency, risk, and upside."
                   value={projectBrief}
                   onChange={(event) => handleProjectBriefChange(event.target.value)}
                 />
@@ -443,6 +450,26 @@ function App() {
                 ) : null}
               </div>
 
+              {aiAnalysis ? (
+                <section className="ai-explanation" aria-live="polite">
+                  <div className="results-header">
+                    <h3>AI recommendation</h3>
+                    <span className="curve-pill">{curveMap[aiAnalysis.curveId].name}</span>
+                  </div>
+
+                  <p className="ai-summary">{aiAnalysis.summary}</p>
+
+                  <div className="ai-reasoning">
+                    <h4>Reasoning</h4>
+                    <ul>
+                      {aiAnalysis.reasoning.map((item, index) => (
+                        <li key={`${index}-${item}`}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </section>
+              ) : null}
+
               <PriceResults
                 curve={aiCurve}
                 title="3 price tiers"
@@ -452,6 +479,14 @@ function App() {
             </section>
           )}
         </main>
+
+        <footer className="attribution">
+          Based on{' '}
+          <a href="https://jonathanstark.com/vpc/" target="_blank" rel="noreferrer">
+            Jonathan Stark&apos;s Value Pricing Calculator
+          </a>
+          .
+        </footer>
       </div>
     </div>
   )

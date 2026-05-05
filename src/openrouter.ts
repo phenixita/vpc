@@ -1,4 +1,4 @@
-export type CurveId = 'campfire' | 'moonshot'
+export type CurveId = 'might-as-well' | 'goldilocks'
 
 export type CurveAnalysisResult = {
   curveId: CurveId
@@ -23,11 +23,16 @@ type AnalyzeCurveSuggestionPayload = {
   error?: string
 }
 
+type OpenRouterMessage = {
+  content?: unknown
+  reasoning?: unknown
+  reasoning_content?: unknown
+  reasoning_details?: unknown
+}
+
 type OpenRouterApiResponse = {
   choices?: Array<{
-    message?: {
-      content?: unknown
-    }
+    message?: OpenRouterMessage
   }>
   error?: string | { message?: string }
 }
@@ -35,7 +40,7 @@ type OpenRouterApiResponse = {
 export const hasConfiguredOpenRouterKey = openRouterApiKey.length > 0
 
 function isCurveId(value: unknown): value is CurveId {
-  return value === 'campfire' || value === 'moonshot'
+  return value === 'might-as-well' || value === 'goldilocks'
 }
 
 export async function analyzeCurveSuggestion({
@@ -61,16 +66,19 @@ export async function analyzeCurveSuggestion({
     body: JSON.stringify({
       model: OPENROUTER_MODEL_ROUTE,
       temperature: 0.2,
+      reasoning: {
+        enabled: true,
+      },
       messages: [
         {
           role: 'system',
           content: [
             'You are helping a value-based pricing calculator choose between two pricing curves.',
             'Curve options:',
-            'campfire = safer, easier to close, lower risk, the buyer naturally leans toward option 3.',
-            'moonshot = bolder, higher-upside, premium-facing, the buyer naturally leans toward option 2.',
+            'might-as-well = Might As Well (MAW), safer, easier to close, lower risk, and naturally leans the buyer toward option 3.',
+            'goldilocks = Goldilocks, bolder, higher-upside, premium-facing, and naturally leans the buyer toward option 2.',
             'Return ONLY valid JSON with the following shape:',
-            '{"curveId":"campfire|moonshot","summary":"one short sentence","reasoning":["short point","short point","short point"]}.',
+            '{"curveId":"might-as-well|goldilocks","summary":"one short sentence","reasoning":["short point","short point","short point"]}.',
             'Do not include markdown or any extra text.',
           ].join(' '),
         },
@@ -88,22 +96,25 @@ export async function analyzeCurveSuggestion({
     throw new Error(extractOpenRouterError(payload))
   }
 
-  const content = payload?.choices?.[0]?.message?.content
+  const message = payload?.choices?.[0]?.message
+  const content = message?.content
 
   if (typeof content !== 'string' || content.trim().length === 0) {
     throw new Error('OpenRouter returned an empty response.')
   }
 
   const suggestion = parseSuggestionContent(content)
-
-  const reasoning = Array.isArray(suggestion?.reasoning)
+  const nativeReasoning = extractReasoningFromMessage(message)
+  const structuredReasoning = Array.isArray(suggestion?.reasoning)
     ? suggestion.reasoning.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
     : []
+  const reasoning = (nativeReasoning.length > 0 ? nativeReasoning : structuredReasoning).slice(0, 5)
 
   if (
     !suggestion ||
     !isCurveId(suggestion.curveId) ||
     typeof suggestion.summary !== 'string' ||
+    suggestion.summary.trim().length === 0 ||
     reasoning.length === 0
   ) {
     throw new Error('The AI returned an unexpected response.')
@@ -111,8 +122,8 @@ export async function analyzeCurveSuggestion({
 
   return {
     curveId: suggestion.curveId,
-    summary: suggestion.summary,
-    reasoning: reasoning.slice(0, 3),
+    summary: suggestion.summary.trim(),
+    reasoning,
     modelRoute:
       typeof suggestion.modelRoute === 'string' ? suggestion.modelRoute : OPENROUTER_MODEL_ROUTE,
   }
@@ -146,4 +157,65 @@ function parseSuggestionContent(content: string): AnalyzeCurveSuggestionPayload 
   } catch {
     return null
   }
+}
+
+function extractReasoningFromMessage(message: OpenRouterMessage | undefined): string[] {
+  const reasoning: string[] = []
+
+  appendReasoningEntries(reasoning, message?.reasoning)
+  appendReasoningEntries(reasoning, message?.reasoning_content)
+  appendReasoningEntries(reasoning, message?.reasoning_details)
+
+  return reasoning
+}
+
+function appendReasoningEntries(target: string[], value: unknown) {
+  if (typeof value === 'string') {
+    appendReasoningLines(target, value)
+    return
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => appendReasoningEntries(target, item))
+    return
+  }
+
+  if (!value || typeof value !== 'object') {
+    return
+  }
+
+  const record = value as Record<string, unknown>
+
+  if (typeof record.text === 'string') {
+    appendReasoningLines(target, record.text)
+  }
+
+  if (typeof record.reasoning === 'string') {
+    appendReasoningLines(target, record.reasoning)
+  }
+
+  if (typeof record.summary === 'string') {
+    appendReasoningLines(target, record.summary)
+  }
+
+  if (Array.isArray(record.summary)) {
+    record.summary.forEach((item) => appendReasoningEntries(target, item))
+  }
+}
+
+function appendReasoningLines(target: string[], text: string) {
+  const entries = text
+    .split(/\r?\n+/)
+    .map((line) => line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim())
+    .filter(Boolean)
+
+  if (entries.length === 0) {
+    return
+  }
+
+  entries.forEach((entry) => {
+    if (!target.includes(entry)) {
+      target.push(entry)
+    }
+  })
 }
