@@ -43,8 +43,46 @@ const intangibleBenefitsOptions = [
   'Higher decision quality and consistency',
 ]
 
+const defaultGeographicZone = 'Not specified'
+
+const geographicZoneSystemPromptContext: Record<string, string> = {
+  [defaultGeographicZone]: '',
+  Italy:
+    'Assume Italy business context: EUR pricing, IVA and compliance expectations, relationship-driven decisions, and moderate discount pressure in procurement.',
+  Europe:
+    'Assume Europe context: strong regulatory sensitivity, data/privacy expectations, multi-country buying variance, and buyer focus on risk reduction and compliance value.',
+  'North America':
+    'Assume North America context: outcome- and ROI-driven buyers, faster premium decisions when value is clear, and stronger acceptance of premium positioning for strategic impact.',
+  'Latin America':
+    'Assume Latin America context: budget sensitivity, trust and references as key drivers, and value communication should emphasize practical ROI with implementation certainty.',
+  'Middle East':
+    'Assume Middle East context: strategic transformation focus, high attention to executive sponsorship, and preference for clear business outcomes tied to national or sector priorities.',
+  Africa:
+    'Assume Africa context: heterogeneous market maturity, procurement variability, and value framing should balance measurable impact with adoption feasibility and resilience.',
+  APAC:
+    'Assume APAC context: highly diverse markets, pragmatic value evaluation, and preference for credible, execution-ready plans with clear upside and manageable risk.',
+  Global:
+    'Assume multi-region context: evaluate value with cross-region variability in purchasing power, regulation, and decision criteria, and prefer robust value arguments that remain valid across territories.',
+}
+
+const geographicZoneOptions = Object.keys(geographicZoneSystemPromptContext)
+
 function keepDigitsOnly(value: string) {
   return value.replace(/\D+/g, '')
+}
+
+function buildSystemPromptWithGeographicContext(systemPrompt: string, geographicZone: string) {
+  const geographicContext = geographicZoneSystemPromptContext[geographicZone]
+
+  if (!geographicContext) {
+    return systemPrompt
+  }
+
+  return [
+    systemPrompt.trim(),
+    'Territorial context to apply while reasoning about perceived value and curve selection:',
+    geographicContext,
+  ].join('\n\n')
 }
 
 function App() {
@@ -54,7 +92,9 @@ function App() {
 
   const [aiProjectValue, setAiProjectValue] = useState('')
   const [aiAnalysis, setAiAnalysis] = useState<CurveAnalysisResult | null>(null)
+  const [aiCurveId, setAiCurveId] = useState<CurveId | ''>('')
   const [projectBrief, setProjectBrief] = useState('')
+  const [projectGeographicZone, setProjectGeographicZone] = useState(defaultGeographicZone)
   const [aiSystemPrompt, setAiSystemPrompt] = useState(defaultAiSystemPrompt)
   const [companyRevenue, setCompanyRevenue] = useState('')
   const [influencedPeople, setInfluencedPeople] = useState('')
@@ -75,7 +115,7 @@ function App() {
   const aiFormatter = useMemo(() => createCurrencyFormatter('EUR'), [])
 
   const manualCurve = manualCurveId ? curveMap[manualCurveId] : null
-  const aiCurve = aiAnalysis ? curveMap[aiAnalysis.curveId] : null
+  const aiCurve = aiCurveId ? curveMap[aiCurveId] : null
   const aiSuggestedPerceivedValue =
     aiAnalysis && Number.isFinite(aiAnalysis.perceivedValue)
       ? aiFormatter.format(Math.floor(aiAnalysis.perceivedValue))
@@ -125,12 +165,13 @@ function App() {
     setIsAnalyzing(true)
     setAnalysisError('')
     setAiAnalysis(null)
+    setAiCurveId('')
 
     try {
       const result = await analyzeCurveSuggestion({
         description: projectBrief.trim(),
         acknowledgedWarning: hasSanitizedBrief,
-        systemPrompt: aiSystemPrompt,
+        systemPrompt: buildSystemPromptWithGeographicContext(aiSystemPrompt, projectGeographicZone),
         companyRevenue,
         influencedPeople,
         expectedRevenueIncrease,
@@ -139,9 +180,11 @@ function App() {
       })
 
       setAiAnalysis(result)
+      setAiCurveId(result.curveId)
       setAiProjectValue(formatPerceivedValueForInput(result.perceivedValue))
     } catch (error) {
       setAiAnalysis(null)
+      setAiCurveId('')
       setAnalysisError(error instanceof Error ? error.message : 'The AI analysis failed.')
     } finally {
       setIsAnalyzing(false)
@@ -151,12 +194,14 @@ function App() {
   function handleProjectBriefChange(value: string) {
     setProjectBrief(value)
     setAiAnalysis(null)
+    setAiCurveId('')
     setAnalysisError('')
   }
 
   function handleSystemPromptChange(value: string) {
     setAiSystemPrompt(value)
     setAiAnalysis(null)
+    setAiCurveId('')
     setAnalysisError('')
   }
 
@@ -205,30 +250,42 @@ function App() {
               projectBrief={projectBrief}
               maxProjectBriefLength={MAX_PROJECT_BRIEF_LENGTH}
               onProjectBriefChange={handleProjectBriefChange}
+              projectGeographicZone={projectGeographicZone}
+              onProjectGeographicZoneChange={(value) => {
+                setProjectGeographicZone(value)
+                setAiAnalysis(null)
+                setAiCurveId('')
+                setAnalysisError('')
+              }}
+              geographicZoneOptions={geographicZoneOptions}
               systemPrompt={aiSystemPrompt}
               onSystemPromptChange={handleSystemPromptChange}
               companyRevenue={companyRevenue}
               onCompanyRevenueChange={(value) => {
                 setCompanyRevenue(keepDigitsOnly(value))
                 setAiAnalysis(null)
+                setAiCurveId('')
                 setAnalysisError('')
               }}
               influencedPeople={influencedPeople}
               onInfluencedPeopleChange={(value) => {
                 setInfluencedPeople(keepDigitsOnly(value))
                 setAiAnalysis(null)
+                setAiCurveId('')
                 setAnalysisError('')
               }}
               expectedRevenueIncrease={expectedRevenueIncrease}
               onExpectedRevenueIncreaseChange={(value) => {
                 setExpectedRevenueIncrease(keepDigitsOnly(value))
                 setAiAnalysis(null)
+                setAiCurveId('')
                 setAnalysisError('')
               }}
               expectedCostReduction={expectedCostReduction}
               onExpectedCostReductionChange={(value) => {
                 setExpectedCostReduction(keepDigitsOnly(value))
                 setAiAnalysis(null)
+                setAiCurveId('')
                 setAnalysisError('')
               }}
               intangibleBenefits={intangibleBenefits}
@@ -241,6 +298,7 @@ function App() {
                   return current.filter((item) => item !== value)
                 })
                 setAiAnalysis(null)
+                setAiCurveId('')
                 setAnalysisError('')
               }}
               intangibleBenefitsOptions={intangibleBenefitsOptions}
@@ -259,10 +317,13 @@ function App() {
               onAiProjectValueChange={setAiProjectValue}
               showAiValueError={showAiValueError}
               aiAnalysis={aiAnalysis}
+              aiCurveId={aiCurveId}
+              onAiCurveChange={setAiCurveId}
               aiCurve={aiCurve}
               aiSuggestedPerceivedValue={aiSuggestedPerceivedValue}
               aiTiers={aiTiers}
               aiEmptyMessage={aiEmptyMessage}
+              curves={curves}
             />
           )}
         </main>

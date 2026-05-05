@@ -1,4 +1,4 @@
-import type { CurveAnalysisResult } from '../openrouter'
+import type { CurveAnalysisResult, CurveId } from '../openrouter'
 import type { CurveConfig, PriceTier } from '../pricing'
 import { PriceResults } from './PriceResults'
 import { ValueFields } from './ValueFields'
@@ -7,6 +7,9 @@ type AiScenarioProps = {
   projectBrief: string
   maxProjectBriefLength: number
   onProjectBriefChange: (value: string) => void
+  projectGeographicZone: string
+  onProjectGeographicZoneChange: (value: string) => void
+  geographicZoneOptions: string[]
   systemPrompt: string
   onSystemPromptChange: (value: string) => void
   companyRevenue: string
@@ -32,16 +35,22 @@ type AiScenarioProps = {
   onAiProjectValueChange: (value: string) => void
   showAiValueError: boolean
   aiAnalysis: CurveAnalysisResult | null
+  aiCurveId: CurveId | ''
+  onAiCurveChange: (curveId: CurveId | '') => void
   aiCurve: CurveConfig | null
   aiSuggestedPerceivedValue: string
   aiTiers: PriceTier[]
   aiEmptyMessage: string
+  curves: CurveConfig[]
 }
 
 export function AiScenario({
   projectBrief,
   maxProjectBriefLength,
   onProjectBriefChange,
+  projectGeographicZone,
+  onProjectGeographicZoneChange,
+  geographicZoneOptions,
   systemPrompt,
   onSystemPromptChange,
   companyRevenue,
@@ -67,10 +76,13 @@ export function AiScenario({
   onAiProjectValueChange,
   showAiValueError,
   aiAnalysis,
+  aiCurveId,
+  onAiCurveChange,
   aiCurve,
   aiSuggestedPerceivedValue,
   aiTiers,
   aiEmptyMessage,
+  curves,
 }: AiScenarioProps) {
   return (
     <section className="scenario" id="ai-panel" role="tabpanel" aria-labelledby="ai-tab">
@@ -105,6 +117,22 @@ export function AiScenario({
       </div>
 
       <div className="field-grid field-grid--two">
+        <div className="field">
+          <label htmlFor="projectGeographicZone">Project geographic zone (optional)</label>
+          <select
+            id="projectGeographicZone"
+            name="projectGeographicZone"
+            value={projectGeographicZone}
+            onChange={(event) => onProjectGeographicZoneChange(event.target.value)}
+          >
+            {geographicZoneOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="field">
           <label htmlFor="companyRevenue">Company revenue (optional)</label>
           <input
@@ -238,6 +266,25 @@ export function AiScenario({
           onProjectValueChange={onAiProjectValueChange}
           showValueError={showAiValueError}
         />
+
+        {aiAnalysis ? (
+          <div className="field field--curve">
+            <label htmlFor="ai-curve">How bad do you want to land this project?</label>
+            <select
+              id="ai-curve"
+              name="ai-curve"
+              value={aiCurveId}
+              onChange={(event) => onAiCurveChange(event.target.value as CurveId | '')}
+            >
+              <option value="">Choose...</option>
+              {curves.map((curve) => (
+                <option key={curve.id} value={curve.id}>
+                  {curve.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
       </div>
 
       {aiAnalysis && aiCurve ? (
