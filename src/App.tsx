@@ -33,6 +33,7 @@ const aiWarningItems = [
   'We cannot guarantee how your data is used, including possible model training.',
   'We cannot guarantee where your data is processed or stored geographically.',
   'Do not include names, secrets, or confidential information.',
+  'No data is retained by this website.',
 ]
 
 function App() {
@@ -219,7 +220,15 @@ function App() {
           <a href="https://jonathanstark.com/vpc/" target="_blank" rel="noreferrer">
             Jonathan Stark&apos;s Value Pricing Calculator
           </a>
-          .
+          . Built by{' '}
+          <a href="https://micheleferracin.it" target="_blank" rel="noreferrer">
+            Michele Ferracin
+          </a>
+          {' '}(&thinsp;
+          <a href="https://www.linkedin.com/in/micheleferracin/" target="_blank" rel="noreferrer">
+            LinkedIn
+          </a>
+          &thinsp;).
         </footer>
       </div>
     </div>
