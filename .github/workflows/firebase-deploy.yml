@@ -13,6 +13,11 @@ jobs:
     permissions:
       contents: read
 
+    env:
+      FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+      FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+      FIREBASE_FUNCTIONS_ENABLED: ${{ secrets.FIREBASE_FUNCTIONS_ENABLED }}
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -40,13 +45,7 @@ jobs:
 
       - name: Deploy Hosting to Firebase
         run: npx firebase-tools deploy --only hosting --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" --non-interactive
-        env:
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
       - name: Deploy Functions to Firebase
-        if: ${{ secrets.FIREBASE_FUNCTIONS_ENABLED == 'true' }}
+        if: env.FIREBASE_FUNCTIONS_ENABLED == 'true'
         run: npx firebase-tools deploy --only functions --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" --non-interactive
-        env:
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
