@@ -8,6 +8,32 @@
       name="description"
       content="AI-assisted value pricing calculator based on Jonathan Stark's VPC, with Goldilocks and Might As Well pricing curves, OpenRouter analysis, and proposal-ready price tiers."
     />
+    <script>
+      ;(() => {
+        try {
+          const storageKey = 'vpc-theme'
+          const storedThemeMode = localStorage.getItem(storageKey)
+          const isValidThemeMode =
+            storedThemeMode === 'light' || storedThemeMode === 'dark' || storedThemeMode === 'system'
+          const resolvedTheme =
+            isValidThemeMode && storedThemeMode !== 'system'
+              ? storedThemeMode
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+
+          document.documentElement.dataset.theme = resolvedTheme
+          document.documentElement.style.colorScheme = resolvedTheme
+        } catch {
+          const fallbackTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'dark'
+            : 'light'
+
+          document.documentElement.dataset.theme = fallbackTheme
+          document.documentElement.style.colorScheme = fallbackTheme
+        }
+      })()
+    </script>
     <title>Value Pricing Calculator</title>
   </head>
   <body>

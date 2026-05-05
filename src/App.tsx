@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AiScenario } from './components/AiScenario'
 import { ManualScenario } from './components/ManualScenario'
 import {
@@ -19,13 +19,21 @@ import {
 import './App.css'
 
 type ScenarioTabId = 'manual' | 'ai'
+type ThemeMode = 'light' | 'dark' | 'system'
 
 const MAX_PROJECT_BRIEF_LENGTH = 5000
+const THEME_STORAGE_KEY = 'vpc-theme'
 
 const scenarioTabs = [
   { id: 'manual', label: 'Manual' },
   { id: 'ai', label: 'AI assisted ✨' },
 ] satisfies Array<{ id: ScenarioTabId; label: string }>
+
+const themeModeOptions = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'system', label: 'System' },
+] satisfies Array<{ value: ThemeMode; label: string }>
 
 const aiWarningItems = [
   'Your text is sent to external AI services.',
@@ -71,6 +79,32 @@ function keepDigitsOnly(value: string) {
   return value.replace(/\D+/g, '')
 }
 
+function readStoredThemeMode(): ThemeMode {
+  if (typeof window === 'undefined') {
+    return 'system'
+  }
+
+  try {
+    const storedThemeMode = window.localStorage.getItem(THEME_STORAGE_KEY)
+
+    if (storedThemeMode === 'light' || storedThemeMode === 'dark' || storedThemeMode === 'system') {
+      return storedThemeMode
+    }
+  } catch {
+    return 'system'
+  }
+
+  return 'system'
+}
+
+function resolveThemeMode(themeMode: ThemeMode) {
+  if (themeMode !== 'system') {
+    return themeMode
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
 function buildSystemPromptWithGeographicContext(systemPrompt: string, geographicZone: string) {
   const geographicContext = geographicZoneSystemPromptContext[geographicZone]
 
@@ -87,6 +121,7 @@ function buildSystemPromptWithGeographicContext(systemPrompt: string, geographic
 
 function App() {
   const [activeTab, setActiveTab] = useState<ScenarioTabId>('manual')
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => readStoredThemeMode())
   const [manualProjectValue, setManualProjectValue] = useState('')
   const [manualCurveId, setManualCurveId] = useState<CurveId | ''>('')
 
@@ -145,6 +180,42 @@ function App() {
   const showAiValueError = aiProjectValue.trim() !== '' && aiParsedValue === null
   const canAnalyze =
     hasConfiguredOpenRouterKey && projectBrief.trim().length > 0 && hasSanitizedBrief && !isAnalyzing
+
+  useEffect(() => {
+    const root = document.documentElement
+    const resolvedThemeMode = resolveThemeMode(themeMode)
+
+    root.dataset.theme = resolvedThemeMode
+    root.style.colorScheme = resolvedThemeMode
+
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, themeMode)
+    } catch {
+      // Ignore storage failures in private mode or locked-down browsers.
+    }
+
+    if (themeMode !== 'system') {
+      return
+    }
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleChange = () => {
+      const nextResolvedThemeMode = resolveThemeMode('system')
+
+      root.dataset.theme = nextResolvedThemeMode
+      root.style.colorScheme = nextResolvedThemeMode
+    }
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleChange)
+
+      return () => mediaQuery.removeEventListener('change', handleChange)
+    }
+
+    mediaQuery.addListener(handleChange)
+
+    return () => mediaQuery.removeListener(handleChange)
+  }, [themeMode])
 
   async function handleAnalyzeWithAi() {
     if (!hasConfiguredOpenRouterKey) {
@@ -214,6 +285,20 @@ function App() {
       <div className="shell">
         <header className="header">
           <h1>Value Pricing Calculator</h1>
+          <div className="theme-switcher" role="radiogroup" aria-label="Theme mode">
+            {themeModeOptions.map((option) => (
+              <label key={option.value} className="theme-switcher-option">
+                <input
+                  type="radio"
+                  name="theme-mode"
+                  value={option.value}
+                  checked={themeMode === option.value}
+                  onChange={() => setThemeMode(option.value)}
+                />
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </div>
         </header>
 
         <div className="tabs" role="tablist" aria-label="Pricing scenarios">
