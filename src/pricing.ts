@@ -19,13 +19,13 @@ export const curves: CurveConfig[] = [
   {
     id: 'might-as-well',
     name: 'I want to land it really bad!',
-    tierTag: 'Goldilocks',
+    tierTag: 'Might as well',
     multipliers: [0.1, 0.15, 0.175],
   },
   {
     id: 'goldilocks',
     name: "Meh, I don't really care",
-    tierTag: 'Might as well',
+    tierTag: 'Goldilocks',
     multipliers: [0.1, 0.22, 0.5],
   },
 ]
